@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Recipe Vault</title>
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#FF5722">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="brand">
+      <span class="brand-icon">🍳</span>
+      <span class="brand-name">Recipe Vault</span>
+    </div>
+    <div class="header-status">● Private & Secure</div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+
+    <!-- VIEW 1: RECIPE VAULT (LIST) -->
+    <section id="vaultView" class="view active">
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Search recipes, ingredients, tags...">
+      </div>
+
+      <div class="platform-filter">
+        <button class="filter-chip active" data-platform="All">All</button>
+        <button class="filter-chip" data-platform="Instagram">Instagram</button>
+        <button class="filter-chip" data-platform="TikTok">TikTok</button>
+        <button class="filter-chip" data-platform="YouTube">YouTube</button>
+        <button class="filter-chip" data-platform="Facebook">Facebook</button>
+        <button class="filter-chip" data-platform="Web">Web Blogs</button>
+      </div>
+
+      <div id="recipeListContainer">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- VIEW 2: IMPORT RECIPE -->
+    <section id="importView" class="view">
+      <div class="import-card">
+        <h2>Import with Gemini AI</h2>
+        <p>Paste a recipe video or guide link from <b>Instagram</b>, <b>TikTok</b>, <b>YouTube</b>, <b>Facebook</b>, or a <b>food blog</b>.</p>
+
+        <div id="importFormArea">
+          <textarea id="importUrlInput" class="url-input" placeholder="Paste link or text here...&#10;https://www.instagram.com/reel/...&#10;https://www.tiktok.com/@...&#10;https://youtu.be/..."></textarea>
+          <button id="extractBtn" class="btn-primary">
+            <span>✨</span> Extract Recipe with AI
+          </button>
+        </div>
+
+        <div id="loadingBox" class="loading-box">
+          <div class="spinner"></div>
+          <h3 id="loadingStatus">Analyzing Video / Post...</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">Gemini is reading the instructions and measuring all ingredients.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: RECIPE DETAIL -->
+    <section id="detailView" class="view">
+      <button id="backToVaultBtn" class="back-btn">← Back to Vault</button>
+
+      <div class="detail-header">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <span id="detailPlatform" class="platform-badge platform-web">WEB</span>
+          <button id="deleteRecipeBtn" style="background: none; border: none; color: #D32F2F; font-size: 13px; font-weight: 700; cursor: pointer;">Delete</button>
+        </div>
+        <h1 id="detailTitle" style="font-size: 24px; font-weight: 800; line-height: 1.25; margin-bottom: 8px;">Recipe Title</h1>
+        <p id="detailDesc" style="font-size: 14px; color: var(--text-muted); line-height: 1.4;"></p>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-item">
+          <div id="detailPrep" class="val">--</div>
+          <div class="lbl">Prep Mins</div>
+        </div>
+        <div class="stat-item">
+          <div id="detailCook" class="val">--</div>
+          <div class="lbl">Cook Mins</div>
+        </div>
+        <div class="stat-item">
+          <div id="detailServings" class="val">--</div>
+          <div class="lbl">Servings</div>
+        </div>
+      </div>
+
+      <!-- Servings Scaler -->
+      <div class="scaler-row">
+        <h3 style="font-size: 18px; font-weight: 800;">Ingredients</h3>
+        <div class="scaler-buttons">
+          <button class="scaler-btn" data-scale="0.5">0.5x</button>
+          <button class="scaler-btn active" data-scale="1">1x</button>
+          <button class="scaler-btn" data-scale="2">2x</button>
+          <button class="scaler-btn" data-scale="3">3x</button>
+        </div>
+      </div>
+
+      <div id="detailIngredients" class="ingredient-list">
+        <!-- Checkbox items injected here -->
+      </div>
+
+      <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 12px;">Step-by-Step Instructions</h3>
+      <div id="detailSteps">
+        <!-- Steps injected here -->
+      </div>
+
+      <div style="margin-top: 30px;">
+        <button id="startCookingBtn" class="btn-primary" style="background: #2E7D32;">
+          <span>👨‍🍳</span> Start Cooking Mode
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FULLSCREEN COOKING MODE -->
+  <div id="cookingModeView">
+    <div class="cook-header">
+      <div id="cookProgressText" class="cook-progress">STEP 1 OF 5</div>
+      <button id="exitCookBtn" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+
+    <div id="cookInstructionText" class="cook-instruction">
+      Preheat your oven to 375°F (190°C) and line a baking sheet with parchment paper.
+    </div>
+
+    <div id="cookTimerBox" class="cook-timer-box" style="display: none;">
+      <div>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.7);">Step Timer</div>
+        <div id="timerDisplay" style="font-size: 28px; font-weight: 800;">00:00</div>
+      </div>
+      <button id="timerToggleBtn" class="btn-primary" style="width: auto; padding: 10px 18px; font-size: 14px;">Start Timer</button>
+    </div>
+
+    <div class="cook-controls">
+      <button id="prevStepBtn" class="cook-btn prev">Previous</button>
+      <button id="nextStepBtn" class="cook-btn next">Next Step</button>
+    </div>
+  </div>
+
+  <!-- PRIVATE PIN AUTH MODAL -->
+  <div id="pinModal">
+    <div class="pin-card">
+      <div style="font-size: 36px; margin-bottom: 10px;">🔒</div>
+      <h3 style="font-size: 18px; font-weight: 800;">Private Recipe Vault</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Enter your 4-digit PIN to unlock your vault.</p>
+      
+      <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="••••" autofocus>
+      <div id="pinError" style="color: #D32F2F; font-size: 12px; display: none; margin-bottom: 12px;">Incorrect PIN. Try again.</div>
+
+      <button id="submitPinBtn" class="btn-primary">Unlock</button>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-view="vaultView">
+      <span class="nav-icon">📖</span>
+      <span>My Vault</span>
+    </button>
+    <button class="nav-item" data-view="importView">
+      <span class="nav-icon">➕</span>
+      <span>Import Recipe</span>
+    </button>
+  </nav>
+
+  <script src="./app.js"></script>
+</body>
+</html>
