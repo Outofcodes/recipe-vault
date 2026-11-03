@@ -297,40 +297,36 @@ async function processRecipeImport(text) {
   loadingBox.style.display = 'block';
 
   const platform = detectPlatform(text);
-  const prompt = `You are an expert culinary AI.
-Extract a structured, delicious recipe from the following social media post, video link, or recipe text.
+  const prompt = `You are an expert culinary AI. Your job is to extract the EXACT, REAL recipe from the user's input.
+DO NOT invent, fabricate, or hallucinate ingredients.
 
-Source Platform: ${platform}
-Input Content: ${text}
+User Input: ${text}
+Detected Platform: ${platform}
 
-Strict Instructions:
-1. Accurately extract or infer the title, a short appetizing description, prep time (minutes), cook time (minutes), and servings.
-2. Break down all ingredients into structured objects:
-   - item: clean ingredient name (e.g. "unsalted butter", "garlic", "heavy cream")
-   - amount: number or null (e.g. 1.5, 2)
-   - unit: string or null (e.g. "cups", "tbsp", "cloves", "grams")
-   - notes: extra prep notes or null (e.g. "minced", "softened", "divided")
-3. Step-by-step instructions:
-   - stepNumber: sequential integer starting at 1
-   - instruction: clear, readable instruction sentence
-   - timerMinutes: number or null (if the step requires waiting/cooking for specific minutes)
-4. Relevant tags: array of 2 to 4 keywords (e.g. ["Dinner", "Pasta", "Quick"])
-
-Respond ONLY with a valid JSON object matching this schema:
+CRITICAL RULES:
+1. If a URL is provided, use Google Search to look up the exact recipe, creator, and webpage/video details.
+2. If the user provided post text or a caption, extract the exact measurements and instructions specified by the creator.
+3. If this is an Instagram or TikTok link with NO caption and Google Search cannot find the specific post content, do NOT make up random ingredients. Instead, return:
+   {
+     "error": "Instagram/TikTok hides this post behind a login. Please copy the caption/ingredients from the video post and paste it here so I can parse the exact recipe!"
+   }
+4. Otherwise, extract the real recipe into JSON with these exact fields:
 {
-  "title": "string",
-  "description": "string",
-  "prepTimeMinutes": 10,
-  "cookTimeMinutes": 25,
+  "title": "string (Exact Recipe Title)",
+  "description": "string (Short description)",
+  "prepTimeMinutes": 15,
+  "cookTimeMinutes": 30,
   "servings": 4,
   "ingredients": [
-    { "item": "string", "amount": 1, "unit": "cup", "notes": "diced" }
+    { "item": "ingredient name", "amount": 1, "unit": "cup", "notes": "diced" }
   ],
   "instructions": [
     { "stepNumber": 1, "instruction": "string", "timerMinutes": null }
   ],
   "tags": ["Dinner", "Pasta"]
-}`;
+}
+
+Return your response as a valid JSON object or inside a \`\`\`json code block.`;
 
   try {
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI_KEY}`;
@@ -339,9 +335,9 @@ Respond ONLY with a valid JSON object matching this schema:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }],
         generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.2,
+          temperature: 0.1,
         },
       }),
     });
@@ -352,10 +348,22 @@ Respond ONLY with a valid JSON object matching this schema:
     }
 
     const data = await apiResponse.json();
-    const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawJson) throw new Error('Gemini returned empty response');
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) throw new Error('Gemini returned an empty response. Please try again.');
 
-    const parsed = JSON.parse(rawJson);
+    // Robust JSON extractor from markdown blocks
+    let parsed;
+    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    } else {
+      parsed = JSON.parse(rawText);
+    }
+
+    if (parsed.error) {
+      alert(parsed.error);
+      return;
+    }
 
     const recipe = {
       id: Date.now().toString(),

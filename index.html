@@ -54,19 +54,25 @@
     <section id="importView" class="view">
       <div class="import-card">
         <h2>Import with Gemini AI</h2>
-        <p>Paste a recipe video or guide link from <b>Instagram</b>, <b>TikTok</b>, <b>YouTube</b>, <b>Facebook</b>, or a <b>food blog</b>.</p>
+        <p>Paste a recipe link, video title, or ingredients from <b>Instagram</b>, <b>TikTok</b>, <b>YouTube</b>, <b>Facebook</b>, or a <b>food blog</b>.</p>
 
         <div id="importFormArea">
-          <textarea id="importUrlInput" class="url-input" placeholder="Paste link or text here...&#10;https://www.instagram.com/reel/...&#10;https://www.tiktok.com/@...&#10;https://youtu.be/..."></textarea>
+          <textarea id="importUrlInput" class="url-input" placeholder="Paste link, video caption, or recipe here...&#10;&#10;Examples:&#10;• YouTube / Web link&#10;• Instagram/TikTok caption with ingredients&#10;• Dish name e.g. 'Crispy Honey Garlic Chicken wings'"></textarea>
+
+          <div style="background: #FFF8E1; border: 1px solid #FFE082; border-radius: 10px; padding: 12px; margin-bottom: 14px; font-size: 12.5px; color: #5D4037; line-height: 1.45;">
+            <b>💡 Instagram & TikTok Tip:</b><br>
+            Instagram and TikTok lock video posts behind private login screens. For 100% exact measurements, copy the <b>video caption</b> (where creators write the ingredients) and paste it here!
+          </div>
+
           <button id="extractBtn" class="btn-primary">
-            <span>✨</span> Extract Recipe with AI
+            <span>✨</span> Extract Real Recipe with AI
           </button>
         </div>
 
         <div id="loadingBox" class="loading-box">
           <div class="spinner"></div>
-          <h3 id="loadingStatus">Analyzing Video / Post...</h3>
-          <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">Gemini is reading the instructions and measuring all ingredients.</p>
+          <h3 id="loadingStatus">Searching & Analyzing Recipe...</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">Gemini is finding the exact ingredients and step-by-step instructions.</p>
         </div>
       </div>
     </section>
