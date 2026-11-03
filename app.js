@@ -1,9 +1,7 @@
 // --- CONFIG & CREDENTIALS ---
-const ACCESS_PIN = '7788';
 // Key decoded at runtime to maintain safety
 const GEMINI_KEY = atob('QVEuQWI4Uk42SnlTU3REOEhnNXM2Mkx4T3RDbWhndDBMa0Nua3Q3Q3dNOFJ3MDJvSFZ1TUE=');
 
-let activePin = localStorage.getItem('recipe_vault_pin') || '';
 let allRecipes = JSON.parse(localStorage.getItem('my_recipe_vault') || '[]');
 let activeRecipe = null;
 let currentMultiplier = 1.0;
@@ -31,42 +29,13 @@ function playChime() {
   } catch (_) {}
 }
 
-// Check URL params for PIN or shared content
+// URL Params for Android share target
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('pin') === ACCESS_PIN) {
-  activePin = ACCESS_PIN;
-  localStorage.setItem('recipe_vault_pin', activePin);
-}
 
 // Register PWA Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
-
-// --- PIN SECURITY ---
-const pinModal = document.getElementById('pinModal');
-const pinInput = document.getElementById('pinInput');
-const pinError = document.getElementById('pinError');
-const submitPinBtn = document.getElementById('submitPinBtn');
-
-function verifyPin(pinToTest) {
-  if (pinToTest === ACCESS_PIN) {
-    activePin = pinToTest;
-    localStorage.setItem('recipe_vault_pin', activePin);
-    pinModal.style.display = 'none';
-    initApp();
-  } else {
-    pinError.style.display = 'block';
-  }
-}
-
-submitPinBtn.addEventListener('click', () => {
-  verifyPin(pinInput.value.trim());
-});
-
-pinInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') verifyPin(pinInput.value.trim());
-});
 
 // --- NAVIGATION ---
 const views = {
@@ -385,6 +354,7 @@ async function processRecipeImport(text) {
   const platform = detectPlatform(text);
   const urlMatch = text.match(/https?:\/\/[^\s]+/);
   const rawUrl = urlMatch ? urlMatch[0] : '';
+  const cleanUrl = rawUrl ? rawUrl.split('?')[0] : '';
 
   let extraContext = '';
 
@@ -409,21 +379,24 @@ async function processRecipeImport(text) {
     }
   }
 
-  // 2. Web Links & ReciMe: Fetch real page markdown via Jina Reader
-  if ((platform === 'Web' || rawUrl.includes('recime.app')) && rawUrl) {
+  // 2. Instagram, ReciMe, TikTok, Facebook, and Web Links: Fetch real page markdown via Jina Reader
+  if (platform !== 'YouTube' && rawUrl) {
     try {
-      const jinaRes = await fetch(`https://r.jina.ai/${rawUrl}`);
+      document.getElementById('loadingStatus').textContent = 'Reading recipe post & caption...';
+      const jinaRes = await fetch(`https://r.jina.ai/${cleanUrl}`);
       if (jinaRes.ok) {
         const md = await jinaRes.text();
-        if (md && md.length > 100) {
-          extraContext = `Webpage Content:\n${md.slice(0, 10000)}`;
+        if (md && md.length > 50) {
+          extraContext = `Source Post & Page Content:\n${md.slice(0, 15000)}`;
         }
       }
-    } catch (_) {}
+    } catch (jinaErr) {
+      console.warn('Jina fetch error:', jinaErr);
+    }
   }
 
   const prompt = `You are an expert culinary AI. Extract the EXACT, REAL recipe from this user input into structured JSON.
-DO NOT invent or hallucinate ingredients.
+DO NOT hallucinate or invent ingredients. Extract ONLY what is described in the source post or video details.
 
 User Input: ${text}
 Source Platform: ${platform}
@@ -431,11 +404,8 @@ ${extraContext ? `\nResolved Source Details / Page Content:\n${extraContext}\n` 
 
 Strict Instructions:
 1. Extract the actual dish name, real ingredients with quantities and units, and step-by-step instructions.
-2. If this is an Instagram or TikTok link with NO caption and no recipe details could be read, return:
-   {
-     "error": "Instagram and TikTok hide this video behind a login wall. Please copy the caption/text under the video or take a quick screenshot and tap 'Scan Screenshot'!"
-   }
-3. Otherwise, output clean JSON:
+2. Rely strictly on the provided Source Details / Page Content.
+3. Output clean JSON:
 {
   "title": "string",
   "description": "string",
@@ -641,14 +611,13 @@ function initApp() {
   // If shared via Android Share Sheet
   const sharedContent = urlParams.get('text') || urlParams.get('url') || urlParams.get('title');
   if (sharedContent) {
+    // Clear URL parameters from the browser address bar immediately so refresh doesn't re-trigger
+    window.history.replaceState({}, document.title, window.location.pathname);
     switchView('importView');
     importUrlInput.value = sharedContent;
     processRecipeImport(sharedContent);
   }
 }
 
-if (activePin === ACCESS_PIN) {
-  initApp();
-} else {
-  pinModal.style.display = 'flex';
-}
+// Start app immediately
+initApp();

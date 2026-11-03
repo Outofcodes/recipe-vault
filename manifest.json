@@ -2,6 +2,7 @@
   "name": "Recipe Vault",
   "short_name": "Recipe Vault",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#FAFAFA",
   "theme_color": "#FF5722",

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'recipe-vault-v2';
+const CACHE_NAME = 'recipe-vault-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -30,11 +30,12 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Let Google API requests go straight to network
-  if (e.request.url.includes('googleapis.com')) {
+  // Let all external API requests (Jina Reader, YouTube oEmbed, Google Gemini) go straight to network
+  if (!e.request.url.startsWith(self.location.origin)) {
     return;
   }
+  // For app assets and share target navigation (?text=...), match ignoring query params
   e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request))
+    caches.match(e.request, { ignoreSearch: true }).then((res) => res || fetch(e.request))
   );
 });
