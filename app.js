@@ -286,6 +286,91 @@ const extractBtn = document.getElementById('extractBtn');
 const importUrlInput = document.getElementById('importUrlInput');
 const importFormArea = document.getElementById('importFormArea');
 const loadingBox = document.getElementById('loadingBox');
+const uploadScreenshotBtn = document.getElementById('uploadScreenshotBtn');
+const screenshotInput = document.getElementById('screenshotInput');
+
+uploadScreenshotBtn.addEventListener('click', () => {
+  screenshotInput.click();
+});
+
+screenshotInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  importFormArea.style.display = 'none';
+  loadingBox.style.display = 'block';
+  document.getElementById('loadingStatus').textContent = 'Analyzing Screenshot with Vision AI...';
+
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64Data = reader.result.split(',')[1];
+    await processImageImport(base64Data, file.type);
+    screenshotInput.value = '';
+  };
+  reader.readAsDataURL(file);
+});
+
+async function processImageImport(base64Data, mimeType) {
+  const prompt = `You are an expert culinary AI. Extract the exact recipe shown in this screenshot or photo.
+Look at the text, title, ingredients, measurements, and cooking instructions.
+DO NOT hallucinate. Extract only what is shown or clearly described.
+
+Format strictly as JSON with fields:
+{
+  "title": "string",
+  "description": "string",
+  "prepTimeMinutes": 15,
+  "cookTimeMinutes": 30,
+  "servings": 4,
+  "ingredients": [
+    { "item": "string", "amount": 1, "unit": "cup", "notes": "diced" }
+  ],
+  "instructions": [
+    { "stepNumber": 1, "instruction": "string", "timerMinutes": null }
+  ],
+  "tags": ["Dinner", "Custom"]
+}`;
+
+  try {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI_KEY}`;
+    const res = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: mimeType || 'image/jpeg',
+                  data: base64Data
+                }
+              }
+            ]
+          }
+        ],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
+      })
+    });
+
+    const data = await res.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) throw new Error('Vision AI returned empty result. Try a clearer screenshot.');
+
+    let parsed;
+    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    else parsed = JSON.parse(rawText);
+
+    saveAndOpenRecipe(parsed, 'Photo / Screenshot', 'Screenshot');
+  } catch (err) {
+    alert('Screenshot extraction failed: ' + err.message);
+  } finally {
+    importFormArea.style.display = 'block';
+    loadingBox.style.display = 'none';
+  }
+}
 
 async function processRecipeImport(text) {
   if (!text || !text.trim()) {
@@ -295,38 +380,76 @@ async function processRecipeImport(text) {
 
   importFormArea.style.display = 'none';
   loadingBox.style.display = 'block';
+  document.getElementById('loadingStatus').textContent = 'Reading & Extracting Recipe...';
 
   const platform = detectPlatform(text);
-  const prompt = `You are an expert culinary AI. Your job is to extract the EXACT, REAL recipe from the user's input.
-DO NOT invent, fabricate, or hallucinate ingredients.
+  const urlMatch = text.match(/https?:\/\/[^\s]+/);
+  const rawUrl = urlMatch ? urlMatch[0] : '';
+
+  let extraContext = '';
+
+  // 1. YouTube & YouTube Shorts: Resolve real title & channel via official public oEmbed
+  if (platform === 'YouTube' && rawUrl) {
+    let videoId = '';
+    const shortsMatch = rawUrl.match(/shorts\/([a-zA-Z0-9_-]+)/);
+    const watchMatch = rawUrl.match(/v=([a-zA-Z0-9_-]+)/);
+    const beMatch = rawUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+    if (shortsMatch) videoId = shortsMatch[1];
+    else if (watchMatch) videoId = watchMatch[1];
+    else if (beMatch) videoId = beMatch[1];
+
+    if (videoId) {
+      try {
+        const oeRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+        if (oeRes.ok) {
+          const oeData = await oeRes.json();
+          extraContext = `YouTube Video Title: "${oeData.title}" by Creator: "${oeData.author_name}"`;
+        }
+      } catch (_) {}
+    }
+  }
+
+  // 2. Web Links & ReciMe: Fetch real page markdown via Jina Reader
+  if ((platform === 'Web' || rawUrl.includes('recime.app')) && rawUrl) {
+    try {
+      const jinaRes = await fetch(`https://r.jina.ai/${rawUrl}`);
+      if (jinaRes.ok) {
+        const md = await jinaRes.text();
+        if (md && md.length > 100) {
+          extraContext = `Webpage Content:\n${md.slice(0, 10000)}`;
+        }
+      }
+    } catch (_) {}
+  }
+
+  const prompt = `You are an expert culinary AI. Extract the EXACT, REAL recipe from this user input into structured JSON.
+DO NOT invent or hallucinate ingredients.
 
 User Input: ${text}
-Detected Platform: ${platform}
+Source Platform: ${platform}
+${extraContext ? `\nResolved Source Details / Page Content:\n${extraContext}\n` : ''}
 
-CRITICAL RULES:
-1. If a URL is provided, use Google Search to look up the exact recipe, creator, and webpage/video details.
-2. If the user provided post text or a caption, extract the exact measurements and instructions specified by the creator.
-3. If this is an Instagram or TikTok link with NO caption and Google Search cannot find the specific post content, do NOT make up random ingredients. Instead, return:
+Strict Instructions:
+1. Extract the actual dish name, real ingredients with quantities and units, and step-by-step instructions.
+2. If this is an Instagram or TikTok link with NO caption and no recipe details could be read, return:
    {
-     "error": "Instagram/TikTok hides this post behind a login. Please copy the caption/ingredients from the video post and paste it here so I can parse the exact recipe!"
+     "error": "Instagram and TikTok hide this video behind a login wall. Please copy the caption/text under the video or take a quick screenshot and tap 'Scan Screenshot'!"
    }
-4. Otherwise, extract the real recipe into JSON with these exact fields:
+3. Otherwise, output clean JSON:
 {
-  "title": "string (Exact Recipe Title)",
-  "description": "string (Short description)",
+  "title": "string",
+  "description": "string",
   "prepTimeMinutes": 15,
   "cookTimeMinutes": 30,
   "servings": 4,
   "ingredients": [
-    { "item": "ingredient name", "amount": 1, "unit": "cup", "notes": "diced" }
+    { "item": "string", "amount": 1, "unit": "cup", "notes": "diced" }
   ],
   "instructions": [
     { "stepNumber": 1, "instruction": "string", "timerMinutes": null }
   ],
-  "tags": ["Dinner", "Pasta"]
-}
-
-Return your response as a valid JSON object or inside a \`\`\`json code block.`;
+  "tags": ["Dinner", "Comfort Food"]
+}`;
 
   try {
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${GEMINI_KEY}`;
@@ -335,8 +458,8 @@ Return your response as a valid JSON object or inside a \`\`\`json code block.`;
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        tools: [{ googleSearch: {} }],
         generationConfig: {
+          responseMimeType: 'application/json',
           temperature: 0.1,
         },
       }),
@@ -351,7 +474,6 @@ Return your response as a valid JSON object or inside a \`\`\`json code block.`;
     const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) throw new Error('Gemini returned an empty response. Please try again.');
 
-    // Robust JSON extractor from markdown blocks
     let parsed;
     const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || rawText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
@@ -365,36 +487,44 @@ Return your response as a valid JSON object or inside a \`\`\`json code block.`;
       return;
     }
 
-    const recipe = {
-      id: Date.now().toString(),
-      title: parsed.title || 'Untitled Recipe',
-      description: parsed.description || '',
-      sourceUrl: text,
-      platform,
-      prepTimeMinutes: parsed.prepTimeMinutes || null,
-      cookTimeMinutes: parsed.cookTimeMinutes || null,
-      servings: parsed.servings || 2,
-      ingredients: (parsed.ingredients || []).map((i) => ({
-        ...i,
-        isChecked: false,
-      })),
-      instructions: parsed.instructions || [],
-      tags: parsed.tags || [],
-      createdAt: new Date().toISOString(),
-    };
-
-    allRecipes.unshift(recipe);
-    saveLocalRecipes();
-
-    importUrlInput.value = '';
-    renderRecipes();
-    openRecipe(recipe.id);
+    saveAndOpenRecipe(parsed, text, platform);
   } catch (err) {
     alert('Extraction failed: ' + err.message);
   } finally {
     importFormArea.style.display = 'block';
     loadingBox.style.display = 'none';
   }
+}
+
+function saveAndOpenRecipe(parsed, sourceUrl, platform) {
+  const recipe = {
+    id: Date.now().toString(),
+    title: parsed.title || parsed.recipe_name || 'Untitled Recipe',
+    description: parsed.description || '',
+    sourceUrl: sourceUrl,
+    platform: platform || 'Web',
+    prepTimeMinutes: parsed.prepTimeMinutes || null,
+    cookTimeMinutes: parsed.cookTimeMinutes || null,
+    servings: parsed.servings || 2,
+    ingredients: (parsed.ingredients || []).map((i) => {
+      if (typeof i === 'string') return { item: i, amount: null, unit: '', notes: '', isChecked: false };
+      return { ...i, isChecked: false };
+    }),
+    instructions: (parsed.instructions || []).map((s, idx) => {
+      if (typeof s === 'string') return { stepNumber: idx + 1, instruction: s, timerMinutes: null };
+      return s;
+    }),
+    tags: parsed.tags || [],
+    createdAt: new Date().toISOString(),
+  };
+
+  allRecipes.unshift(recipe);
+  saveLocalRecipes();
+
+  importUrlInput.value = '';
+  renderRecipes();
+  openRecipe(recipe.id);
+}
 }
 
 extractBtn.addEventListener('click', () => {
