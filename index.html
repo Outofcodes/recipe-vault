@@ -1,188 +1,27 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Recipe Vault</title>
-  
-  <!-- PWA & Mobile Meta Tags -->
-  <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#FF5722">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  
-  <link rel="stylesheet" href="./style.css">
-</head>
-<body>
-
-  <!-- Top Header -->
-  <header>
-    <div class="brand">
-      <span class="brand-icon">🍳</span>
-      <span class="brand-name">Recipe Vault</span>
-    </div>
-    <div class="header-status">● Ready</div>
-  </header>
-
-  <!-- Main Content -->
-  <main>
-
-    <!-- VIEW 1: RECIPE VAULT (LIST) -->
-    <section id="vaultView" class="view active">
-      <div class="search-box">
-        <span>🔍</span>
-        <input type="text" id="searchInput" placeholder="Search recipes, ingredients, tags...">
-      </div>
-
-      <div class="platform-filter">
-        <button class="filter-chip active" data-platform="All">All</button>
-        <button class="filter-chip" data-platform="Instagram">Instagram</button>
-        <button class="filter-chip" data-platform="TikTok">TikTok</button>
-        <button class="filter-chip" data-platform="YouTube">YouTube</button>
-        <button class="filter-chip" data-platform="Facebook">Facebook</button>
-        <button class="filter-chip" data-platform="Web">Web Blogs</button>
-      </div>
-
-      <div id="recipeListContainer">
-        <!-- Injected via JavaScript -->
-      </div>
-    </section>
-
-    <!-- VIEW 2: IMPORT RECIPE -->
-    <section id="importView" class="view">
-      <div class="import-card">
-        <h2>Import with Gemini AI</h2>
-        <p>Paste a recipe link, video title, or ingredients from <b>Instagram</b>, <b>TikTok</b>, <b>YouTube</b>, <b>Facebook</b>, or a <b>food blog</b>.</p>
-
-        <div id="importFormArea">
-          <textarea id="importUrlInput" class="url-input" placeholder="Paste link, video caption, or recipe here...&#10;&#10;Examples:&#10;• YouTube Shorts or video link&#10;• ReciMe or food blog link&#10;• Instagram/TikTok caption or dish name"></textarea>
-
-          <button id="extractBtn" class="btn-primary" style="margin-bottom: 12px;">
-            <span>✨</span> Extract Recipe with AI
-          </button>
-
-          <div style="text-align: center; margin: 10px 0; color: var(--text-muted); font-size: 13px; font-weight: bold;">
-            — OR —
-          </div>
-
-          <!-- Screenshot / Photo Upload -->
-          <input type="file" id="screenshotInput" accept="image/*" style="display: none;">
-          <button id="uploadScreenshotBtn" class="btn-primary" style="background: #455A64;">
-            <span>📸</span> Scan Screenshot / Photo of Recipe
-          </button>
-
-          <div style="background: #FFF8E1; border: 1px solid #FFE082; border-radius: 10px; padding: 12px; margin-top: 14px; font-size: 12px; color: #5D4037; line-height: 1.45;">
-            <b>💡 For Instagram & TikTok:</b><br>
-            Take a 1-second screenshot of the video screen or caption on your phone, then tap <b>"Scan Screenshot"</b> above! Gemini will read the ingredients directly from your image with 100% accuracy.
-          </div>
-        </div>
-
-        <div id="loadingBox" class="loading-box">
-          <div class="spinner"></div>
-          <h3 id="loadingStatus">Searching & Analyzing Recipe...</h3>
-          <p style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">Gemini is finding the exact ingredients and step-by-step instructions.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW 3: RECIPE DETAIL -->
-    <section id="detailView" class="view">
-      <button id="backToVaultBtn" class="back-btn">← Back to Vault</button>
-
-      <div class="detail-header">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-          <span id="detailPlatform" class="platform-badge platform-web">WEB</span>
-          <button id="deleteRecipeBtn" style="background: none; border: none; color: #D32F2F; font-size: 13px; font-weight: 700; cursor: pointer;">Delete</button>
-        </div>
-        <h1 id="detailTitle" style="font-size: 24px; font-weight: 800; line-height: 1.25; margin-bottom: 8px;">Recipe Title</h1>
-        <p id="detailDesc" style="font-size: 14px; color: var(--text-muted); line-height: 1.4;"></p>
-      </div>
-
-      <div class="stat-grid">
-        <div class="stat-item">
-          <div id="detailPrep" class="val">--</div>
-          <div class="lbl">Prep Mins</div>
-        </div>
-        <div class="stat-item">
-          <div id="detailCook" class="val">--</div>
-          <div class="lbl">Cook Mins</div>
-        </div>
-        <div class="stat-item">
-          <div id="detailServings" class="val">--</div>
-          <div class="lbl">Servings</div>
-        </div>
-      </div>
-
-      <!-- Servings Scaler -->
-      <div class="scaler-row">
-        <h3 style="font-size: 18px; font-weight: 800;">Ingredients</h3>
-        <div class="scaler-buttons">
-          <button class="scaler-btn" data-scale="0.5">0.5x</button>
-          <button class="scaler-btn active" data-scale="1">1x</button>
-          <button class="scaler-btn" data-scale="2">2x</button>
-          <button class="scaler-btn" data-scale="3">3x</button>
-        </div>
-      </div>
-
-      <div id="detailIngredients" class="ingredient-list">
-        <!-- Checkbox items injected here -->
-      </div>
-
-      <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 12px;">Step-by-Step Instructions</h3>
-      <div id="detailSteps">
-        <!-- Steps injected here -->
-      </div>
-
-      <div style="margin-top: 30px;">
-        <button id="startCookingBtn" class="btn-primary" style="background: #2E7D32;">
-          <span>👨‍🍳</span> Start Cooking Mode
-        </button>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- FULLSCREEN COOKING MODE -->
-  <div id="cookingModeView">
-    <div class="cook-header">
-      <div id="cookProgressText" class="cook-progress">STEP 1 OF 5</div>
-      <button id="exitCookBtn" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">✕</button>
-    </div>
-
-    <div id="cookInstructionText" class="cook-instruction">
-      Preheat your oven to 375°F (190°C) and line a baking sheet with parchment paper.
-    </div>
-
-    <div id="cookTimerBox" class="cook-timer-box" style="display: none;">
-      <div>
-        <div style="font-size: 12px; color: rgba(255,255,255,0.7);">Step Timer</div>
-        <div id="timerDisplay" style="font-size: 28px; font-weight: 800;">00:00</div>
-      </div>
-      <button id="timerToggleBtn" class="btn-primary" style="width: auto; padding: 10px 18px; font-size: 14px;">Start Timer</button>
-    </div>
-
-    <div class="cook-controls">
-      <button id="prevStepBtn" class="cook-btn prev">Previous</button>
-      <button id="nextStepBtn" class="cook-btn next">Next Step</button>
-    </div>
-  </div>
-
-
-
-  <!-- Bottom Navigation -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-view="vaultView">
-      <span class="nav-icon">📖</span>
-      <span>My Vault</span>
-    </button>
-    <button class="nav-item" data-view="importView">
-      <span class="nav-icon">➕</span>
-      <span>Import Recipe</span>
-    </button>
-  </nav>
-
-  <script src="./app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>ReciMe - Recipe Keeper & Meal Planner</title>
+    
+    <!-- PWA / Mobile Web App Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ReciMe" />
+    <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+    <meta name="theme-color" content="#FF5A36" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Google Fonts: Plus Jakarta Sans for refined mobile typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="./assets/index-BGYi6aYb.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DVYN-2U5.css">
+  <link rel="manifest" href="./manifest.webmanifest"></head>
+  <body class="bg-stone-50 text-stone-900 antialiased selection:bg-orange-100 selection:text-orange-900 overscroll-none min-h-screen">
+    <div id="root"></div>
+  </body>
 </html>

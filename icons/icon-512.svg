@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF6B4A"/>
+      <stop offset="100%" stop-color="#E24322"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#7B1A04" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="128" fill="url(#grad)"/>
+  
+  <!-- Inner circular glow -->
+  <circle cx="256" cy="256" r="190" fill="#FFFFFF" fill-opacity="0.08"/>
+  
+  <!-- Icon: Pan/Pot with Steam and Heart/Star -->
+  <g filter="url(#shadow)" fill="#FFFFFF">
+    <!-- Cooking Pot Body -->
+    <path d="M140 230 C140 320 180 360 256 360 C332 360 372 320 372 230 L140 230 Z" />
+    
+    <!-- Pot Rim -->
+    <rect x="124" y="212" width="264" height="26" rx="13" />
+    
+    <!-- Left Handle -->
+    <path d="M124 235 C96 235 96 275 124 275" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <!-- Right Handle -->
+    <path d="M388 235 C416 235 416 275 388 275" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none"/>
+    
+    <!-- Fork & Spoon Crest inside pot -->
+    <path d="M256 275 C246 275 238 283 238 293 C238 315 256 325 256 325 C256 325 274 315 274 293 C274 283 266 275 256 275 Z" fill="#FF5A36"/>
+
+    <!-- Steam swirls rising up -->
+    <path d="M200 180 C190 155 215 130 205 105" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <path d="M256 185 C246 150 270 120 256 85" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" fill="none"/>
+    <path d="M312 180 C322 155 297 130 307 105" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>
